@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futuristic IPL Scorecard 🏏</title>
+    <meta name="description" content="Live IPL T20 scorecard — dynamic, animated, and AI-powered cricket insights.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Rajdhani', 'sans-serif'],
+                    },
+                    colors: {
+                        dark: '#080A0F',
+                        panel: 'rgba(255,255,255,0.03)',
+                        mi: '#004BA0',
+                        csk: '#F4C430',
+                        neon: '#00F0FF',
+                        ai: '#A78BFA',
+                        boundary4: '#22C55E',
+                        boundary6: '#F59E0B',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --csk: #F4C430;
+            --neon: #00F0FF;
+            --ai: #A78BFA;
+            --mi: #2563EB;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: #080A0F;
+            background-image:
+                radial-gradient(ellipse 60% 40% at 10% 5%, rgba(244,196,48,0.10) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 90% 80%, rgba(37,99,235,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse 40% 30% at 50% 50%, rgba(167,139,250,0.05) 0%, transparent 70%);
+            color: white;
+            min-height: 100vh;
+        }
+
+        /* ─── Glass Panel ─── */
+        .glass {
+            background: rgba(255,255,255,0.04);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.09);
+            border-radius: 18px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .glass:hover { transform: translateY(-1px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+
+        /* ─── Scrollbar hide ─── */
+        .hide-sb::-webkit-scrollbar { display: none; }
+        .hide-sb { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* ─── Analyst Mode ─── */
+        .analyst-data { display: none; }
+        body.analyst-mode .analyst-data { display: block; }
+        body.analyst-mode .casual-data { display: none; }
+
+        /* ─── Glow Text ─── */
+        .glow-neon { text-shadow: 0 0 12px rgba(0,240,255,0.7), 0 0 24px rgba(0,240,255,0.3); }
+        .glow-csk  { text-shadow: 0 0 12px rgba(244,196,48,0.7), 0 0 24px rgba(244,196,48,0.3); }
+        .glow-ai   { text-shadow: 0 0 10px rgba(167,139,250,0.6); }
+
+        /* ─── Live dot ─── */
+        @keyframes live-pulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+        }
+        .live-dot { animation: live-pulse 1.4s infinite; border-radius: 50%; }
+
+        /* ─── Progress bar shimmer ─── */
+        @keyframes shimmer {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+        .shimmer {
+            background: linear-gradient(90deg, var(--csk) 0%, #fff8 50%, var(--csk) 100%);
+            background-size: 200% auto;
+            animation: shimmer 2.5s linear infinite;
+        }
+        .shimmer-blue {
+            background: linear-gradient(90deg, var(--mi) 0%, #60a5fa 50%, var(--mi) 100%);
+            background-size: 200% auto;
+            animation: shimmer 2.5s linear infinite;
+        }
+
+        /* ─── Bounce balls (momentum) ─── */
+        @keyframes pop-in {
+            0%   { transform: scale(0.4) rotate(-10deg); opacity:0; }
+            60%  { transform: scale(1.2) rotate(4deg); opacity:1; }
+            100% { transform: scale(1) rotate(0deg); opacity:1; }
+        }
+        .ball { animation: pop-in 0.35s ease both; }
+
+        /* ─── 4 & 6 GIF Celebration overlay ─── */
+        #celebration-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+        #celebration-overlay.show { opacity: 1; }
+
+        .celebration-inner {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Big emoji pop */
+        @keyframes emoji-pop {
+            0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+            40%  { transform: scale(1.4) rotate(8deg); opacity: 1; }
+            60%  { transform: scale(0.9) rotate(-4deg); }
+            80%  { transform: scale(1.05) rotate(2deg); }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .cel-emoji {
+            font-size: 6rem;
+            line-height: 1;
+            animation: emoji-pop 0.55s cubic-bezier(.36,.07,.19,.97) both;
+            filter: drop-shadow(0 0 20px gold);
+        }
+
+        /* Text label */
+        @keyframes label-fly {
+            0%   { transform: translateY(30px) scale(0.6); opacity: 0; }
+            60%  { transform: translateY(-6px) scale(1.1); opacity: 1; }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        .cel-label {
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 800;
+            font-size: 2.6rem;
+            letter-spacing: 0.08em;
+            animation: label-fly 0.5s 0.15s ease both;
+            text-transform: uppercase;
+        }
+
+        /* Confetti particles */
+        .confetti-wrap {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        @keyframes confetti-fall {
+            0%   { transform: translateY(-60px) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+        .confetti-piece {
+            position: absolute;
+            width: 10px; height: 10px;
+            border-radius: 2px;
+            animation: confetti-fall linear forwards;
+        }
+
+        /* Ripple pulse on background */
+        @keyframes ripple {
+            0%   { transform: scale(0.5); opacity: 0.6; }
+            100% { transform: scale(3);   opacity: 0; }
+        }
+        .ripple-ring {
+            position: absolute;
+            width: 200px; height: 200px;
+            border-radius: 50%;
+            border: 4px solid;
+            animation: ripple 0.8s ease-out forwards;
+        }
+
+        /* Funny text labels */
+        @keyframes funny-text {
+            0%   { transform: translateY(0) scale(1); }
+            25%  { transform: translateY(-6px) scale(1.05); }
+            75%  { transform: translateY(3px) scale(0.97); }
+            100% { transform: translateY(0) scale(1); }
+        }
+        .cel-funny {
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            opacity: 0.9;
+            animation: funny-text 0.6s 0.4s ease both;
+            text-align: center;
+            padding: 4px 14px;
+            border-radius: 999px;
+            backdrop-filter: blur(8px);
+        }
+
+        /* ─── Score digit flip ─── */
+        @keyframes flip-in {
+            0%   { transform: rotateX(90deg); opacity: 0; }
+            100% { transform: rotateX(0deg);  opacity: 1; }
+        }
+        .flip { animation: flip-in 0.4s ease; }
+
+        /* ─── Over card glow on hover ─── */
+        .over-card:hover { border-color: rgba(0,240,255,0.3); box-shadow: 0 0 18px rgba(0,240,255,0.12); }
+
+        /* ─── Mode toggle ─── */
+        .mode-toggle { position: relative; }
+        .mode-toggle-pill {
+            position: absolute; inset: 3px;
+            border-radius: 999px;
+            transition: all 0.3s cubic-bezier(.34,1.56,.64,1);
+        }
+
+        /* ─── Floating particles ─── */
+        @keyframes float-particle {
+            0%,100% { transform: translateY(0) scale(1); opacity: 0.4; }
+            50%      { transform: translateY(-18px) scale(1.15); opacity: 0.7; }
+        }
+        .float-p {
+            position: absolute;
+            border-radius: 50%;
+            animation: float-particle ease-in-out infinite;
+        }
+
+        /* ─── Bar chart ─── */
+        @keyframes bar-grow {
+            from { height: 0; }
+            to   { height: var(--h); }
+        }
+        .bar-col { animation: bar-grow 0.8s ease both; }
+
+        /* ─── Wicket shake ─── */
+        @keyframes wicket-shake {
+            0%,100% { transform: rotate(0deg); }
+            20%      { transform: rotate(-10deg) scale(1.2); }
+            40%      { transform: rotate(10deg) scale(1.15); }
+            60%      { transform: rotate(-6deg); }
+            80%      { transform: rotate(4deg); }
+        }
+        .wicket-ball:hover { animation: wicket-shake 0.5s ease; cursor: pointer; }
+
+        /* ─── Neon border pulse ─── */
+        @keyframes neon-border {
+            0%,100% { box-shadow: 0 0 8px rgba(0,240,255,0.3), inset 0 0 8px rgba(0,240,255,0.05); }
+            50%      { box-shadow: 0 0 20px rgba(0,240,255,0.6), inset 0 0 16px rgba(0,240,255,0.1); }
+        }
+        .neon-pulse { animation: neon-border 2s ease-in-out infinite; }
+
+        /* ─── Ticker ─── */
+        @keyframes ticker-scroll {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
+        }
+        .ticker-track { animation: ticker-scroll 22s linear infinite; white-space: nowrap; display: inline-block; }
+        .ticker-wrap { overflow: hidden; }
+    </style>
+</head>
+
+<body class="antialiased flex justify-center pb-12 relative overflow-x-hidden">
+
+    <!-- ═══ 4 & 6 Celebration Overlay ═══ -->
+    <div id="celebration-overlay">
+        <div class="confetti-wrap" id="confetti-wrap"></div>
+        <div class="celebration-inner" id="cel-inner">
+            <div class="ripple-ring" id="ripple-ring"></div>
+            <div class="cel-emoji" id="cel-emoji"></div>
+            <div class="cel-label glow-csk" id="cel-label"></div>
+            <div class="cel-funny" id="cel-funny"></div>
+        </div>
+    </div>
+
+    <!-- ─── Floating BG Particles ─── -->
+    <div class="float-p w-72 h-72 bg-csk/10 blur-[90px]" style="top:-60px;left:-80px;animation-duration:7s;"></div>
+    <div class="float-p w-64 h-64 bg-blue-600/10 blur-[80px]" style="top:200px;right:-60px;animation-duration:9s;animation-delay:-3s;"></div>
+    <div class="float-p w-48 h-48 bg-ai/10 blur-[70px]" style="top:600px;left:40px;animation-duration:11s;animation-delay:-5s;"></div>
+
+    <!-- ─── Main Container ─── -->
+    <div class="w-full max-w-md px-4 pt-5 relative z-10 space-y-4">
+
+        <!-- ══ Live Ticker ══ -->
+        <div class="glass py-2 px-3 ticker-wrap border-neon/20">
+            <div class="ticker-track text-xs text-gray-400 font-medium" style="gap:3rem;">
+                🏏 CSK vs MI | IPL 2025 | Wankhede Stadium, Mumbai &nbsp;•&nbsp;
+                🔥 Dhoni smashes 6 off Bumrah! &nbsp;•&nbsp;
+                📊 CSK need 44 off 20 balls &nbsp;•&nbsp;
+                ⚡ Bumrah's spell: 1/22 in 3.4 overs &nbsp;•&nbsp;
+                🌟 Man of the Match contender: MS Dhoni &nbsp;•&nbsp;
+                🏏 CSK vs MI | IPL 2025 | Wankhede Stadium, Mumbai &nbsp;•&nbsp;
+                🔥 Dhoni smashes 6 off Bumrah! &nbsp;•&nbsp;
+                📊 CSK need 44 off 20 balls &nbsp;•&nbsp;
+                ⚡ Bumrah's spell: 1/22 in 3.4 overs &nbsp;•&nbsp;
+                🌟 Man of the Match contender: MS Dhoni &nbsp;•&nbsp;
+            </div>
+        </div>
+
+        <!-- ══ Header ══ -->
+        <header class="flex justify-between items-center">
+            <div class="flex items-center space-x-2.5">
+                <span class="live-dot w-3 h-3 bg-red-500 inline-block relative">
+                    <span class="animate-ping absolute inset-0 rounded-full bg-red-400 opacity-70"></span>
+                </span>
+                <span class="font-display font-bold text-sm tracking-wider text-red-400 uppercase">Live · IPL T20</span>
+            </div>
+
+            <!-- Mode Toggle -->
+            <div id="mode-toggle-btn"
+                class="glass flex items-center rounded-full p-1 text-xs font-bold cursor-pointer select-none relative mode-toggle"
+                onclick="toggleMode()" style="width:148px;">
+                <div id="toggle-pill" class="mode-toggle-pill w-[66px] bg-white/20 z-0"></div>
+                <div id="btn-casual" class="relative z-10 px-3 py-1 rounded-full text-white transition-colors w-[66px] text-center">Casual</div>
+                <div id="btn-analyst" class="relative z-10 px-3 py-1 rounded-full text-gray-400 transition-colors w-[66px] text-center">Analyst</div>
+            </div>
+        </header>
+
+        <!-- ══ 1. Live Score Card ══ -->
+        <div class="glass p-5 relative overflow-hidden neon-pulse" style="border-color: rgba(244,196,48,0.2);">
+            <!-- Corner watermark -->
+            <div class="absolute -right-6 -top-6 text-csk/5 text-[100px] font-display font-black select-none">CSK</div>
+            <!-- Team logos -->
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <p class="text-[10px] text-gray-500 font-semibold uppercase tracking-widest mb-1">2nd Innings · Chasing 212</p>
+                    <div class="flex items-baseline space-x-2">
+                        <h1 id="score-display" class="font-display text-6xl font-black tracking-tight text-csk glow-csk flip">168</h1>
+                        <span class="font-display text-3xl text-gray-400 font-bold">/4</span>
+                    </div>
+                    <p class="font-display text-base text-gray-300 mt-1">
+                        Overs: <span class="text-white font-bold">16.4</span>
+                        <span class="text-xs text-gray-500 ml-2">CRR: 10.08</span>
+                    </p>
+                </div>
+                <div class="text-right flex flex-col items-end gap-2">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/thumb/2/2b/Chennai_Super_Kings_Logo.svg/1200px-Chennai_Super_Kings_Logo.svg.png"
+                        alt="CSK" class="h-14 w-14 object-contain opacity-90 drop-shadow-[0_0_12px_rgba(244,196,48,0.5)]">
+                    <div class="text-right">
+                        <p class="text-sm text-gray-400">Need: <span class="text-white font-bold text-base">44</span> <span class="text-gray-500 text-xs">off 20 balls</span></p>
+                        <p class="text-xs text-neon mt-0.5 analyst-data font-semibold">RRR: 13.20</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Required runs bar -->
+            <div class="mt-2">
+                <div class="flex justify-between text-[10px] text-gray-500 mb-1">
+                    <span>Progress: <strong class="text-white">168</strong> runs</span>
+                    <span>Target: <strong class="text-csk">212</strong></span>
+                </div>
+                <div class="w-full h-2.5 bg-white/5 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full shimmer transition-all duration-1000" style="width: 79%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ 2. Win Probability ══ -->
+        <div class="glass p-4">
+            <div class="flex justify-between text-xs font-bold mb-2.5 font-display tracking-widest uppercase">
+                <span class="text-csk glow-csk">CSK 42%</span>
+                <span class="text-gray-500 text-[10px] self-center">Win Probability</span>
+                <span class="text-blue-400">MI 58%</span>
+            </div>
+            <div class="w-full h-3 rounded-full flex overflow-hidden shadow-[0_0_12px_rgba(255,255,255,0.08)]">
+                <div class="shimmer h-full transition-all duration-1000 rounded-l-full" style="width: 42%"></div>
+                <div class="shimmer-blue h-full transition-all duration-1000 rounded-r-full" style="width: 58%"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-2.5 text-center italic casual-data">"Dhoni at the crease — never count CSK out! 🦁"</p>
+            <p class="text-xs text-neon mt-2.5 text-center font-medium analyst-data">
+                <i class="fa-solid fa-chart-line mr-1"></i>Bumrah's spell shifts MI win prob +12%. Death-over xEcon: 7.8
+            </p>
+        </div>
+
+        <!-- ══ 3. Batter vs Bowler ══ -->
+        <div class="grid grid-cols-2 gap-3 relative">
+            <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-dark border border-white/10 rounded-full w-9 h-9 z-10 flex items-center justify-center text-[10px] font-display font-black text-gray-400">VS</div>
+
+            <!-- Batter -->
+            <div class="glass p-4 relative overflow-hidden" style="border-left: 2px solid var(--csk);">
+                <div class="flex items-center space-x-2 mb-2">
+                    <div class="h-2 w-2 bg-csk rounded-full animate-pulse"></div>
+                    <span class="text-sm font-bold text-gray-100">MS Dhoni</span>
+                </div>
+                <div class="flex items-baseline space-x-1">
+                    <span class="font-display text-4xl font-black text-csk glow-csk">28</span>
+                    <span class="text-sm text-gray-400">(14)</span>
+                </div>
+                <div class="mt-2 text-xs text-gray-500 flex justify-between">
+                    <span>SR: <span class="text-white font-semibold">200.0</span></span>
+                    <span>4s: 2 | 6s: 2</span>
+                </div>
+                <!-- Mini run-rate bar -->
+                <div class="mt-2 w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div class="h-full bg-csk rounded-full" style="width: 72%"></div>
+                </div>
+                <!-- Analyst -->
+                <div class="mt-3 pt-3 border-t border-white/10 text-xs analyst-data space-y-1">
+                    <div class="flex justify-between"><span class="text-gray-500">True SR</span><span class="text-neon glow-neon font-bold">215.4</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">vs Pace</span><span class="text-white font-semibold">220.0</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">Dot%</span><span class="text-green-400 font-semibold">15%</span></div>
+                </div>
+            </div>
+
+            <!-- Bowler -->
+            <div class="glass p-4 relative overflow-hidden" style="border-right: 2px solid #2563EB;">
+                <div class="flex justify-end items-center space-x-2 mb-2">
+                    <span class="text-sm font-bold text-gray-100">J. Bumrah</span>
+                    <div class="h-2 w-2 bg-blue-500 rounded-full"></div>
+                </div>
+                <div class="flex justify-end items-baseline space-x-1">
+                    <span class="text-sm text-gray-400">Overs:</span>
+                    <span class="font-display text-2xl font-bold text-blue-400">3.4</span>
+                </div>
+                <div class="mt-2 text-xs text-gray-500 flex justify-between">
+                    <span class="text-white font-semibold">1/22</span>
+                    <span>Econ: <span class="text-blue-300 font-semibold">6.2</span></span>
+                </div>
+                <div class="mt-2 w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                    <div class="h-full bg-blue-500 rounded-full" style="width: 80%"></div>
+                </div>
+                <!-- Analyst -->
+                <div class="mt-3 pt-3 border-t border-white/10 text-xs analyst-data space-y-1">
+                    <div class="flex justify-between"><span class="text-gray-500">xWickets</span><span class="text-neon font-bold">1.8</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">Yorkers</span><span class="text-white font-semibold">42%</span></div>
+                    <div class="flex justify-between"><span class="text-gray-500">xEcon</span><span class="text-orange-400 font-semibold">7.4</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ 4. Momentum Balls (Last 18) — with 4 & 6 gifs ══ -->
+        <div class="glass p-4">
+            <h3 class="text-xs font-display font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <i class="fa-solid fa-circle-dot text-neon text-[10px] animate-pulse"></i> Momentum — Last 18 Balls
+                <span class="ml-auto text-[9px] text-gray-600 font-sans normal-case">Click 4 or 6 for celebration!</span>
+            </h3>
+            <div class="flex flex-wrap gap-2" id="momentum-balls">
+                <!-- Generated by JS below -->
+            </div>
+        </div>
+
+        <!-- ══ 5. Over-by-Over Bar Chart ══ -->
+        <div class="glass p-4">
+            <h3 class="text-xs font-display font-bold text-gray-400 uppercase tracking-widest mb-3">Over-by-Over Runs</h3>
+            <div class="flex items-end gap-1.5 h-16 analyst-data">
+                <!-- bar heights in px, max 20 runs = 64px -->
+            </div>
+            <div class="flex space-x-2 overflow-x-auto hide-sb pb-1">
+                <!-- Over 13 -->
+                <div class="glass over-card min-w-[130px] p-3 flex-shrink-0 transition-all">
+                    <div class="flex justify-between text-xs mb-1.5">
+                        <span class="font-display font-bold text-gray-300">Ovr 13</span>
+                        <span class="text-gray-500">8 runs</span>
+                    </div>
+                    <div class="flex space-x-1 text-[10px] font-bold">
+                        <span class="ball w-5 h-5 rounded bg-white/10 text-gray-300 flex items-center justify-center" style="animation-delay:0ms">1</span>
+                        <span class="ball w-5 h-5 rounded bg-white/10 text-gray-300 flex items-center justify-center" style="animation-delay:60ms">2</span>
+                        <span class="ball w-5 h-5 rounded bg-white/5 text-gray-600 flex items-center justify-center" style="animation-delay:120ms">0</span>
+                        <span class="ball w-5 h-5 rounded bg-white/10 text-gray-300 flex items-center justify-center" style="animation-delay:180ms">1</span>
+                        <span class="ball w-5 h-5 rounded cursor-pointer bg-green-500/20 text-green-400 flex items-center justify-center border border-green-500/40 hover:scale-125 transition-transform wicket-ball" style="animation-delay:240ms" onclick="celebrate('4')">4</span>
+                        <span class="ball w-5 h-5 rounded bg-white/5 text-gray-600 flex items-center justify-center" style="animation-delay:300ms">0</span>
+                    </div>
+                </div>
+                <!-- Over 14 -->
+                <div class="glass over-card min-w-[130px] p-3 flex-shrink-0 transition-all">
+                    <div class="flex justify-between text-xs mb-1.5">
+                        <span class="font-display font-bold text-gray-300">Ovr 14</span>
+                        <span class="text-gray-500">10 runs</span>
+                    </div>
+                    <div class="flex space-x-1 text-[10px] font-bold">
+                        <span class="ball w-5 h-5 rounded bg-white/10 text-gray-300 flex items-center justify-center" style="animation-delay:0ms">1</span>
+                        <span class="ball w-5 h-5 rounded cursor-pointer bg-amber-400/20 text-amber-400 flex items-center justify-center border border-amber-400/40 hover:scale-125 transition-transform wicket-ball" style="animation-delay:60ms" onclick="celebrate('6')">6</span>
+                        <span class="ball w-5 h-5 rounded bg-white/10 text-gray-300 flex items-center justify-center" style="animation-delay:120ms">1</span>
+                        <span class="ball w-5 h-5 rounded bg-white/5 text-gray-600 flex items-center justify-center" style="animation-delay:180ms">0</span>
+                        <span class="ball w-5 h-5 rounded bg-white/10 text-gray-300 flex items-center justify-center" style="animation-delay:240ms">2</span>
+                        <span class="ball w-5 h-5 rounded bg-white/5 text-gray-600 flex items-center justify-center" style="animation-delay:300ms">0</span>
+                    </div>
+                </div>
+                <!-- Over 15 -->
+                <div class="glass over-card min-w-[130px] p-3 flex-shrink-0 transition-all">
+                    <div class="flex justify-between text-xs mb-1.5">
+                        <span class="font-display font-bold text-gray-300">Ovr 15</span>
+                        <span class="text-gray-500">6 runs, 1W</span>
+                    </div>
+                    <div class="flex space-x-1 text-[10px] font-bold">
+                        <span class="ball w-5 h-5 rounded bg-red-600/20 text-red-400 flex items-center justify-center border border-red-600/40 wicket-ball" style="animation-delay:0ms">W</span>
+                        <span class="ball w-5 h-5 rounded bg-white/5 text-gray-600 flex items-center justify-center" style="animation-delay:60ms">0</span>
+                        <span class="ball w-5 h-5 rounded bg-white/10 text-gray-300 flex items-center justify-center" style="animation-delay:120ms">1</span>
+                        <span class="ball w-5 h-5 rounded bg-white/10 text-gray-300 flex items-center justify-center" style="animation-delay:180ms">1</span>
+                        <span class="ball w-5 h-5 rounded cursor-pointer bg-green-500/20 text-green-400 flex items-center justify-center border border-green-500/40 hover:scale-125 transition-transform wicket-ball" style="animation-delay:240ms" onclick="celebrate('4')">4</span>
+                        <span class="ball w-5 h-5 rounded bg-white/5 text-gray-600 flex items-center justify-center" style="animation-delay:300ms">0</span>
+                    </div>
+                </div>
+                <!-- Over 16 (current) -->
+                <div class="glass over-card min-w-[130px] p-3 flex-shrink-0 border border-neon/20 transition-all" style="box-shadow: 0 0 14px rgba(0,240,255,0.1)">
+                    <div class="flex justify-between text-xs mb-1.5">
+                        <span class="font-display font-bold text-neon">Ovr 16*</span>
+                        <span class="text-gray-500">14 runs</span>
+                    </div>
+                    <div class="flex space-x-1 text-[10px] font-bold">
+                        <span class="ball w-5 h-5 rounded cursor-pointer bg-amber-400/20 text-amber-400 flex items-center justify-center border border-amber-400/40 hover:scale-125 transition-transform wicket-ball" style="animation-delay:0ms" onclick="celebrate('6')">6</span>
+                        <span class="ball w-5 h-5 rounded bg-white/10 text-gray-300 flex items-center justify-center" style="animation-delay:60ms">2</span>
+                        <span class="ball w-5 h-5 rounded bg-white/5 text-gray-600 flex items-center justify-center" style="animation-delay:120ms">0</span>
+                        <span class="ball w-5 h-5 rounded bg-white/10 text-gray-300 flex items-center justify-center" style="animation-delay:180ms">1</span>
+                        <span class="ball w-5 h-5 rounded bg-white/10 text-gray-300 flex items-center justify-center" style="animation-delay:240ms">1</span>
+                        <span class="ball w-5 h-5 rounded cursor-pointer bg-green-500/20 text-green-400 flex items-center justify-center border border-green-500/40 hover:scale-125 transition-transform wicket-ball" style="animation-delay:300ms" onclick="celebrate('4')">4</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ 6. Momentum Balls ══ -->
+        <div class="glass p-4">
+            <h3 class="text-xs font-display font-bold text-gray-400 uppercase tracking-widest mb-3">
+                This Over's Balls
+            </h3>
+            <div class="flex items-center gap-3">
+                <!-- Ball sequence with bigger icons -->
+                <div class="flex gap-2 flex-wrap" id="this-over-balls">
+                    <!-- JS generated -->
+                </div>
+                <div class="ml-auto text-right text-xs text-gray-500">
+                    <span class="text-white font-bold font-display text-2xl">14</span><br>runs
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ 7. Partnership & Last Wicket ══ -->
+        <div class="grid grid-cols-2 gap-3">
+            <div class="glass p-4">
+                <h3 class="text-xs font-display font-bold text-gray-400 uppercase tracking-widest mb-1.5">Partnership</h3>
+                <div class="font-display text-3xl font-black text-white">42 <span class="text-sm text-gray-500 font-sans font-normal">(18b)</span></div>
+                <div class="mt-1.5 space-y-1">
+                    <div class="flex items-center gap-1.5 text-[10px] text-gray-400">
+                        <span class="w-2 h-2 rounded-full bg-csk inline-block"></span>Dhoni: 28(14) · SR 200
+                    </div>
+                    <div class="flex items-center gap-1.5 text-[10px] text-gray-400">
+                        <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span>Jadeja: 14(4) · SR 350
+                    </div>
+                </div>
+            </div>
+            <div class="glass p-4">
+                <h3 class="text-xs font-display font-bold text-gray-400 uppercase tracking-widest mb-1.5">Last Wicket</h3>
+                <div class="font-display text-xl font-bold text-white">S. Dube</div>
+                <p class="text-[10px] text-gray-500 mt-1">c Rohit b Bumrah</p>
+                <p class="text-[10px] text-red-400 font-bold mt-1">@ 126/4 (13.1 ov)</p>
+                <div class="mt-2 text-[10px] text-gray-500 casual-data italic">💀 Gone fishing too early!</div>
+            </div>
+        </div>
+
+        <!-- ══ 8. AI Insights ══ -->
+        <div class="glass p-4 relative overflow-hidden" style="border-color: rgba(167,139,250,0.25); background: linear-gradient(135deg, rgba(167,139,250,0.08) 0%, transparent 70%);">
+            <div class="absolute -right-4 -top-4 text-ai/8 text-[90px] font-display font-black select-none">AI</div>
+            <div class="flex items-center space-x-2 mb-2.5">
+                <div class="w-6 h-6 rounded-full bg-ai/20 flex items-center justify-center">
+                    <i class="fa-solid fa-sparkles text-ai text-[10px]"></i>
+                </div>
+                <h3 class="text-xs font-display font-bold text-ai uppercase tracking-widest glow-ai">Predictive Insight</h3>
+                <span class="ml-auto text-[9px] text-ai/50 font-semibold uppercase tracking-wider">AI ⚡</span>
+            </div>
+            <p class="text-sm text-gray-200 leading-relaxed casual-data">
+                Bumrah historically struggles with Dhoni in the death overs. <span class="text-csk font-semibold">Expect Dhoni to wait for the wide yorker</span> — patience is his superpower. 🦁
+            </p>
+            <p class="text-sm text-gray-200 leading-relaxed analyst-data">
+                <span class="text-neon font-bold">AI Projection:</span> Bumrah bowls <span class="text-white font-semibold">78% wide yorkers</span> to RHBs in overs 16–20.
+                Dhoni's SR vs wide yorkers: <span class="text-green-400 font-bold">210.5</span>.
+                Optimal MI strategy: <span class="text-orange-400 font-semibold">hard lengths into the body.</span>
+            </p>
+        </div>
+
+        <!-- ══ Footer ══ -->
+        <div class="text-center text-[10px] text-gray-700 font-display uppercase tracking-widest pt-2 pb-32">
+            Powered by NextGen Cricket AI · <span class="text-ai/40">v2.0</span>
+        </div>
+
+    </div><!-- /main container -->
+
+    <!-- ════════════════════════════════════
+         STICKY BOTTOM ACTION BUTTONS BAR
+    ════════════════════════════════════ -->
+    <div id="action-bar" style="
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        z-index: 1000;
+        background: rgba(8,10,15,0.92);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(255,255,255,0.1);
+        padding: 10px 12px 14px;
+        box-shadow: 0 -8px 30px rgba(0,0,0,0.5);
+    ">
+        <p style="text-align:center;font-size:9px;letter-spacing:0.12em;color:rgba(255,255,255,0.25);font-family:'Rajdhani',sans-serif;font-weight:700;text-transform:uppercase;margin-bottom:8px;">🏏 Tap to Celebrate</p>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;justify-content:center;max-width:440px;margin:0 auto;">
+
+            <!-- FOUR -->
+            <button onclick="celebrate('4')" style="
+                background:linear-gradient(135deg,rgba(34,197,94,0.25),rgba(34,197,94,0.1));
+                border:1px solid rgba(34,197,94,0.5);
+                color:#4ade80;
+                font-family:'Rajdhani',sans-serif;font-weight:800;
+                font-size:13px;letter-spacing:0.05em;
+                padding:8px 14px;border-radius:12px;cursor:pointer;
+                transition:all 0.15s ease;
+                box-shadow:0 0 10px rgba(34,197,94,0.15);
+            " onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 0 18px rgba(34,197,94,0.4)'"
+               onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 0 10px rgba(34,197,94,0.15)'">
+                🏏 FOUR
+            </button>
+
+            <!-- SIX -->
+            <button onclick="celebrate('6')" style="
+                background:linear-gradient(135deg,rgba(245,158,11,0.25),rgba(245,158,11,0.1));
+                border:1px solid rgba(245,158,11,0.5);
+                color:#fbbf24;
+                font-family:'Rajdhani',sans-serif;font-weight:800;
+                font-size:13px;letter-spacing:0.05em;
+                padding:8px 14px;border-radius:12px;cursor:pointer;
+                transition:all 0.15s ease;
+                box-shadow:0 0 10px rgba(245,158,11,0.15);
+            " onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 0 18px rgba(245,158,11,0.4)'"
+               onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 0 10px rgba(245,158,11,0.15)'">
+                🚀 SIX
+            </button>
+
+            <!-- HALF CENTURY -->
+            <button onclick="celebrate('50')" style="
+                background:linear-gradient(135deg,rgba(168,85,247,0.25),rgba(168,85,247,0.1));
+                border:1px solid rgba(168,85,247,0.5);
+                color:#c084fc;
+                font-family:'Rajdhani',sans-serif;font-weight:800;
+                font-size:13px;letter-spacing:0.05em;
+                padding:8px 14px;border-radius:12px;cursor:pointer;
+                transition:all 0.15s ease;
+                box-shadow:0 0 10px rgba(168,85,247,0.15);
+            " onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 0 18px rgba(168,85,247,0.4)'"
+               onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 0 10px rgba(168,85,247,0.15)'">
+                ⭐ 50
+            </button>
+
+            <!-- CENTURY -->
+            <button onclick="celebrate('100')" style="
+                background:linear-gradient(135deg,rgba(251,191,36,0.3),rgba(244,196,48,0.1));
+                border:1px solid rgba(244,196,48,0.6);
+                color:#f4c430;
+                font-family:'Rajdhani',sans-serif;font-weight:800;
+                font-size:13px;letter-spacing:0.05em;
+                padding:8px 14px;border-radius:12px;cursor:pointer;
+                transition:all 0.15s ease;
+                box-shadow:0 0 12px rgba(244,196,48,0.2);
+            " onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 0 22px rgba(244,196,48,0.5)'"
+               onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 0 12px rgba(244,196,48,0.2)'">
+                👑 100
+            </button>
+
+            <!-- OUT -->
+            <button onclick="celebrate('out')" style="
+                background:linear-gradient(135deg,rgba(239,68,68,0.25),rgba(239,68,68,0.1));
+                border:1px solid rgba(239,68,68,0.5);
+                color:#f87171;
+                font-family:'Rajdhani',sans-serif;font-weight:800;
+                font-size:13px;letter-spacing:0.05em;
+                padding:8px 14px;border-radius:12px;cursor:pointer;
+                transition:all 0.15s ease;
+                box-shadow:0 0 10px rgba(239,68,68,0.15);
+            " onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 0 18px rgba(239,68,68,0.4)'"
+               onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 0 10px rgba(239,68,68,0.15)'">
+                💀 OUT
+            </button>
+
+            <!-- HAT-TRICK -->
+            <button onclick="celebrate('hattrick')" style="
+                background:linear-gradient(135deg,rgba(0,240,255,0.2),rgba(0,240,255,0.05));
+                border:1px solid rgba(0,240,255,0.5);
+                color:#00f0ff;
+                font-family:'Rajdhani',sans-serif;font-weight:800;
+                font-size:13px;letter-spacing:0.05em;
+                padding:8px 14px;border-radius:12px;cursor:pointer;
+                transition:all 0.15s ease;
+                box-shadow:0 0 10px rgba(0,240,255,0.15);
+            " onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 0 18px rgba(0,240,255,0.4)'"
+               onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 0 10px rgba(0,240,255,0.15)'">
+                🎩 HAT-TRICK
+            </button>
+
+            <!-- WIDE -->
+            <button onclick="celebrate('wide')" style="
+                background:linear-gradient(135deg,rgba(251,146,60,0.2),rgba(251,146,60,0.05));
+                border:1px solid rgba(251,146,60,0.4);
+                color:#fb923c;
+                font-family:'Rajdhani',sans-serif;font-weight:800;
+                font-size:13px;letter-spacing:0.05em;
+                padding:8px 14px;border-radius:12px;cursor:pointer;
+                transition:all 0.15s ease;
+            " onmouseover="this.style.transform='scale(1.1)'"
+               onmouseout="this.style.transform='scale(1)'">
+                😤 WIDE
+            </button>
+
+            <!-- NO BALL -->
+            <button onclick="celebrate('noball')" style="
+                background:linear-gradient(135deg,rgba(99,102,241,0.2),rgba(99,102,241,0.05));
+                border:1px solid rgba(99,102,241,0.4);
+                color:#818cf8;
+                font-family:'Rajdhani',sans-serif;font-weight:800;
+                font-size:13px;letter-spacing:0.05em;
+                padding:8px 14px;border-radius:12px;cursor:pointer;
+                transition:all 0.15s ease;
+            " onmouseover="this.style.transform='scale(1.1)'"
+               onmouseout="this.style.transform='scale(1)'">
+                🚫 NO BALL
+            </button>
+
+        </div>
+    </div>
+
+    <!-- (close main container already done above) -->
+
+    </div><!-- /main container -->
+
+    <!-- ════════════════════════════════════════
+         JAVASCRIPT
+    ════════════════════════════════════════ -->
+    <script>
+        // ─── Mode Toggle ───────────────────────────────────────
+        let isAnalyst = false;
+        function toggleMode() {
+            isAnalyst = !isAnalyst;
+            const body = document.body;
+            const pill = document.getElementById('toggle-pill');
+            const casual = document.getElementById('btn-casual');
+            const analyst = document.getElementById('btn-analyst');
+
+            if (isAnalyst) {
+                body.classList.add('analyst-mode');
+                pill.style.left = '72px';
+                pill.style.background = 'rgba(0,240,255,0.2)';
+                pill.style.boxShadow = '0 0 14px rgba(0,240,255,0.3)';
+                casual.classList.replace('text-white','text-gray-500');
+                analyst.classList.replace('text-gray-400','text-neon');
+            } else {
+                body.classList.remove('analyst-mode');
+                pill.style.left = '3px';
+                pill.style.background = 'rgba(255,255,255,0.18)';
+                pill.style.boxShadow = 'none';
+                analyst.classList.replace('text-neon','text-gray-400');
+                casual.classList.replace('text-gray-500','text-white');
+            }
+        }
+
+        // ─── Momentum Balls (last 18 balls) ────────────────────
+        const ballData = [
+            {v:'1',type:'run'},{v:'4',type:'four'},{v:'2',type:'run'},
+            {v:'0',type:'dot'},{v:'6',type:'six'},{v:'1',type:'run'},
+            {v:'W',type:'wicket'},{v:'0',type:'dot'},{v:'1',type:'run'},
+            {v:'1',type:'run'},{v:'4',type:'four'},{v:'1',type:'run'},
+            {v:'6',type:'six'},{v:'2',type:'run'},{v:'0',type:'dot'},
+            {v:'1',type:'run'},{v:'1',type:'run'},{v:'?',type:'next'},
+        ];
+        const styles = {
+            run:    'bg-white/10 text-gray-300',
+            dot:    'bg-white/5 text-gray-600',
+            four:   'bg-green-500/20 text-green-400 border border-green-500/40 cursor-pointer hover:scale-125 hover:shadow-[0_0_10px_rgba(34,197,94,0.5)]',
+            six:    'bg-amber-400/20 text-amber-400 border border-amber-400/40 cursor-pointer hover:scale-125 hover:shadow-[0_0_10px_rgba(245,158,11,0.5)]',
+            wicket: 'bg-red-600/20 text-red-400 border border-red-600/40',
+            next:   'bg-white/10 text-white border border-white/30 animate-pulse',
+        };
+        const container = document.getElementById('momentum-balls');
+        ballData.forEach((b, i) => {
+            const el = document.createElement('span');
+            el.className = `ball w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold transition-transform ${styles[b.type]}`;
+            el.style.animationDelay = `${i * 40}ms`;
+            el.textContent = b.v;
+            if (b.type === 'four') el.onclick = () => celebrate('4');
+            if (b.type === 'six')  el.onclick = () => celebrate('6');
+            container.appendChild(el);
+        });
+
+        // ─── This Over Balls ────────────────────────────────────
+        const thisOver = ['6','2','0','1','1','4'];
+        const thisOverContainer = document.getElementById('this-over-balls');
+        const thisStyles = {
+            '6': 'bg-amber-400/20 text-amber-400 border border-amber-400/40 cursor-pointer hover:scale-125',
+            '4': 'bg-green-500/20 text-green-400 border border-green-500/40 cursor-pointer hover:scale-125',
+            '0': 'bg-white/5 text-gray-600',
+            'W': 'bg-red-600/20 text-red-400 border border-red-600/40',
+        };
+        thisOver.forEach((v, i) => {
+            const el = document.createElement('span');
+            const cls = thisStyles[v] || 'bg-white/10 text-gray-200';
+            el.className = `ball w-9 h-9 rounded-lg flex items-center justify-center text-sm font-black transition-transform ${cls}`;
+            el.style.animationDelay = `${i * 60}ms`;
+            el.textContent = v;
+            if (v === '6') el.onclick = () => celebrate('6');
+            if (v === '4') el.onclick = () => celebrate('4');
+            thisOverContainer.appendChild(el);
+        });
+
+        // ─── Celebration Config per event ─────────────────────
+        const CEL_CONFIG = {
+            '4': {
+                emojis:  ['🏏','💥','🙌','🔥'],
+                label:   'FOUR! 🏏',
+                color:   '#22C55E',
+                funny:   ["Bowler's ego: shattered 🥲","Ball doing early retirement! 💼","Outfield running like it owes rent 🏃","Fielder: 'I didn't see it coming' 😅"],
+                confetti:['#22C55E','#86EFAC','#4ADE80','#d1fae5','#fff'],
+                count:   28, duration: 2200
+            },
+            '6': {
+                emojis:  ['🚀','🎆','💫','🤩'],
+                label:   'SIX! 🚀',
+                color:   '#F4C430',
+                funny:   ["Ball needs a passport 🛂✈️","Dhoni sent it to orbit 🌕","Bumrah.exe has stopped working 💀","CSK fans leaving their jobs rn 🎉"],
+                confetti:['#F4C430','#FDE68A','#FB923C','#FDBA74','#fff','#FF6B6B'],
+                count:   55, duration: 3000
+            },
+            '50': {
+                emojis:  ['⭐','🎯','👏','🌟'],
+                label:   'HALF CENTURY! ⭐',
+                color:   '#c084fc',
+                funny:   ["Helmet raise unlocked! 🪖","50 reasons the bowler is crying 😭","Gloves off. Bat kiss. Iconic 😎","Even Bumrah is slow-clapping 👏"],
+                confetti:['#a855f7','#c084fc','#e879f9','#f0abfc','#fff'],
+                count:   40, duration: 2800
+            },
+            '100': {
+                emojis:  ['👑','🏆','💯','🎊'],
+                label:   'CENTURY! 👑',
+                color:   '#FCD34D',
+                funny:   ["Helmet off. Crowd ROARING 🦁","Stats guy is exhausted 📊","The bowler has left the country 🛫","Phone battery at 100%, just like the score 📱"],
+                confetti:['#FCD34D','#FDE68A','#FB923C','#fff','#f472b6','#60a5fa'],
+                count:   80, duration: 4000
+            },
+            'out': {
+                emojis:  ['💀','😱','🏏','☠️'],
+                label:   'OUT! 💀',
+                color:   '#f87171',
+                funny:   ["Walk of shame begins 🚶","Bat back in the bag 👜","Commentator: 'he'll be disappointed' 🎙️","DRS? Nope. Gone. Bye. 👋"],
+                confetti:['#ef4444','#fca5a5','#7f1d1d','#fecaca','#fff'],
+                count:   20, duration: 2000
+            },
+            'hattrick': {
+                emojis:  ['🎩','🔱','⚡','🌪️'],
+                label:   'HAT-TRICK! 🎩',
+                color:   '#00F0FF',
+                funny:   ["3 wickets. 3 hearts broken 💔","Bowler is now a legend 🗿","Batters texting each other: 'did u survive?' 📲","Stumps: absolutely demolished 🏗️"],
+                confetti:['#00F0FF','#67e8f9','#0ea5e9','#fff','#7c3aed','#f59e0b'],
+                count:   70, duration: 3500
+            },
+            'wide': {
+                emojis:  ['😤','➡️','🙈','😬'],
+                label:   'WIDE BALL! 😤',
+                color:   '#fb923c',
+                funny:   ["Bowler forgot where the stumps are 😂","GPS: recalculating... 🗺️","Umpire's arm went straight up 🙋","1 free run! CSK fans cheer for nothing 😄"],
+                confetti:['#fb923c','#fed7aa','#fdba74','#fff'],
+                count:   15, duration: 1800
+            },
+            'noball': {
+                emojis:  ['🚫','😅','🦶','⚠️'],
+                label:   'NO BALL! 🚫',
+                color:   '#818cf8',
+                funny:   ["Bowler's foot has trust issues 🦶","Free hit incoming! Batters: 😈","Umpire checked the foot cam 📹","Bowler will remember this... forever 😔"],
+                confetti:['#6366f1','#a5b4fc','#818cf8','#fff','#c7d2fe'],
+                count:   18, duration: 1800
+            },
+        };
+
+        let celTimeout = null;
+
+        function celebrate(type) {
+            const cfg = CEL_CONFIG[type];
+            if (!cfg) return;
+
+            const overlay  = document.getElementById('celebration-overlay');
+            const emojiEl  = document.getElementById('cel-emoji');
+            const labelEl  = document.getElementById('cel-label');
+            const funnyEl  = document.getElementById('cel-funny');
+            const ripple   = document.getElementById('ripple-ring');
+            const confWrap = document.getElementById('confetti-wrap');
+
+            if (celTimeout) clearTimeout(celTimeout);
+            overlay.classList.remove('show');
+            confWrap.innerHTML = '';
+
+            emojiEl.textContent = cfg.emojis[Math.floor(Math.random() * cfg.emojis.length)];
+            labelEl.textContent = cfg.label;
+            labelEl.style.color = cfg.color;
+            funnyEl.textContent = cfg.funny[Math.floor(Math.random() * cfg.funny.length)];
+            funnyEl.style.background = cfg.color + '22';
+            funnyEl.style.color      = cfg.color;
+            funnyEl.style.border     = `1px solid ${cfg.color}55`;
+
+            ripple.style.borderColor = cfg.color;
+            ripple.style.animation = 'none';
+            void ripple.offsetWidth;
+            ripple.style.animation = '';
+
+            for (let i = 0; i < cfg.count; i++) {
+                const p = document.createElement('div');
+                p.className = 'confetti-piece';
+                p.style.background = cfg.confetti[Math.floor(Math.random() * cfg.confetti.length)];
+                p.style.left   = Math.random() * 100 + '%';
+                p.style.top    = '-10px';
+                p.style.width  = (Math.random() * 12 + 5) + 'px';
+                p.style.height = (Math.random() * 12 + 5) + 'px';
+                p.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                p.style.animationDuration = (Math.random() * 1.6 + 0.7) + 's';
+                p.style.animationDelay    = (Math.random() * 0.5) + 's';
+                confWrap.appendChild(p);
+            }
+
+            setTimeout(() => overlay.classList.add('show'), 10);
+            celTimeout = setTimeout(() => overlay.classList.remove('show'), cfg.duration);
+        }
+
+        // Click overlay to dismiss early
+        document.getElementById('celebration-overlay').addEventListener('click', () => {
+            document.getElementById('celebration-overlay').classList.remove('show');
+        });
+
+        // Auto demo: trigger a 6 on page load after 1.2s
+        setTimeout(() => celebrate('6'), 1200);
+    </script>
+</body>
+</html>
